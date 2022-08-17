@@ -65,6 +65,11 @@ class Tree
   end
 
   def insert(value, node = @root)
+    if value == node.data
+      puts "Invalid value."
+      return nil
+    end
+
     return @root = Node.new(value, nil, nil) if @root.nil?
 
     return node.left = Node.new(value, nil, nil) if node.left.nil? && value < node.data
@@ -79,7 +84,10 @@ class Tree
   end
 
   def delete(value, node = @root)
-    return puts 'Invalid value.' if node.nil?
+    if node.nil?
+      puts 'Invalid value.'
+      return nil
+    end
 
     if @root.data == value
       father_node = @root
@@ -133,7 +141,12 @@ class Tree
   end
 
   def find(value, node = @root)
-    return p node if node.data == value
+    if node.nil?
+      puts 'Invalid value.'
+      return nil
+    end
+
+    return node if node.data == value
 
     if value < node.data
       find(value, node.left)
@@ -142,35 +155,135 @@ class Tree
     end
   end
 
+  def level_order(queue = [@root], arr = [], &my_block)
+    return arr if queue.empty?
+
+    my_block.call(queue.first.data) if block_given?
+    [queue.first.left, queue.first.right].each { |element| queue << element unless element.nil? }
+    arr << queue.first.data unless block_given?
+    queue.shift
+    return level_order(queue, &my_block) if block_given?
+
+    level_order(queue, arr)
+  end
+
+  def preorder(father = @root, arr = [], &my_block)
+    left = father.left
+    right = father.right
+    if block_given?
+      yield father.data if father.data == @root.data
+      yield left.data unless left.nil?
+    elsif father.data == @root.data
+      [father.data, left.data].each { |element| arr << element unless element.nil? }
+    else
+      arr << left.data unless left.nil?
+    end
+    preorder(left, arr, &my_block) unless left.nil?
+    if block_given?
+      yield right.data unless right.nil?
+    else
+      arr << right.data unless right.nil?
+    end
+    preorder(right, arr, &my_block) unless right.nil?
+    arr
+  end
+
+  def inorder(father = @root, arr = [], &my_block)
+    inorder(father.left, arr, &my_block) unless father.left.nil?
+    yield father.data if block_given?
+    arr << father.data
+    inorder(father.right, arr, &my_block) unless father.right.nil?
+    arr
+  end
+
+  def postorder(father = @root, arr = [], &my_block)
+    postorder(father.left, arr, &my_block) unless father.left.nil?
+    postorder(father.right, arr, &my_block) unless father.right.nil?
+
+    if block_given?
+      yield father.data
+    else
+      arr << father.data
+    end
+    arr
+  end
+
+  def height(node, height = 0, child = nil)
+    if node.nil?
+      puts 'Invalid value.'
+      return nil
+    end
+    left_height = 0
+    right_height = 0
+
+    left_height += height(node.left, height + 1) unless node.left.nil?
+    right_height += height(node.right, height + 1) unless node.right.nil?
+
+    return height if left_height.zero? && right_height.zero?
+
+    left_height <= right_height ? right_height : left_height
+  end
+
+  def depth(node, depth = 0, root = @root)
+    return depth if node.data == root.data
+    node.data < root.data ? depth(node, depth + 1, root.left) : depth(node, depth + 1, root.right)
+  end
+
+  def balanced?(node = @root, height = 0)
+    left_height = 0
+    right_height = 0
+    left_height += balanced?(node.left, height + 1) unless node.left.nil?
+    right_height += balanced?(node.right, height + 1) unless node.right.nil?
+
+    if node.data == @root.data
+      return true if left_height == right_height
+
+      return true if left_height - right_height == 1 || right_height - left_height == 1
+
+      return false
+    end
+
+    return height if left_height.zero? && right_height.zero?
+
+    left_height <= right_height ? right_height : left_height
+  end
+
+  def rebalance
+    initialize(inorder)
+  end
+
   def print(node = @root, prefix = '', is_left = true)
-    return puts "nil" if @root.nil?
+    return puts nil if @root.nil?
 
     print(node.right, "#{prefix}#{is_left ? '│   ' : '    '}", false) if node.right
     puts "#{prefix}#{is_left ? '└── ' : '┌── '}#{node.data}"
     print(node.left, "#{prefix}#{is_left ? '    ' : '│   '}", true) if node.left
   end
-
-  def level_order(queue = [@root], &my_block)
-    return if queue.empty?
-    my_block.call(queue.first.data)
-    [queue.first.left, queue.first.right].each { |element| queue << element unless element.nil? }
-    queue.shift
-    level_order(queue, &my_block)
-  end
 end
 
-array = []
-35.times { |i| array << i }
+array = (Array.new(15) { rand(1..100) })
 
-tree2 = Tree.new(array)
-tree2.print
-tree2.delete(24)
-tree2.insert(24)
-tree2.print
-tree2.find(29)
+tree = Tree.new(array)
 
-arr = []
-tree2.level_order do |node|
-  arr << node
-end
-p arr
+tree.print
+puts tree.balanced?
+
+p tree.level_order
+p tree.preorder
+p tree.inorder
+p tree.postorder
+
+tree.insert(100)
+tree.insert(105)
+tree.insert(110)
+tree.insert(115)
+tree.print
+puts tree.balanced?
+
+tree.rebalance
+tree.print
+p tree.level_order
+p tree.preorder
+p tree.inorder
+p tree.postorder
+puts tree.balanced?
